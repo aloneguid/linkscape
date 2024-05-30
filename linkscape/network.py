@@ -6,14 +6,14 @@ import base64
 
 class Node:
     def __init__(self,
-                 id: str,
+                 node_id: str,
                  label: str = None,
                  tooltip: str = None,
                  color: str = "#57C7E3", level: int = None,
                  radius: int = 18,
                  stroke_color: str = "#23B3D7",
                  stroke_width: int = 2):
-        self.id = id
+        self.node_id = node_id
         self.label = label
         self.tooltip = tooltip or label
         self.color = color
@@ -30,7 +30,7 @@ class Edge:
                  opacity: float = 1.0,
                  width: float = 1,
                  force: float = None):
-        self.id = 0
+        self.edge_id = 0
         self.label = label
         self.source = source
         self.target = target
@@ -63,14 +63,10 @@ class Network:
                       .replace("$collision_radius", str(collision_radius))
                       .replace("$linkType", link_type)
                       .replace("$showArrows", "true" if show_arrows else "false")
-                      .replace("$nodeFontFamily", node_label_font_family)
-                      .replace("$nodeFontSize", node_label_font_size)
-                      .replace("$nodeFontColor", node_label_color)
-                      .replace("$linkFontFamily", link_label_font_family)
-                      .replace("$linkFontSize", link_label_font_size)
-                      .replace("$linkFontColor", link_label_color)
-                      .replace("$linkForce", str(link_force))
-                      .replace("$backgroundColor", background_color))
+                      .replace("$linkForce", str(link_force)))
+        self._generate_styles(node_label_font_family, node_label_font_size, node_label_color,
+                              link_label_font_family, link_label_font_size, link_label_color,
+                              background_color)
         self._width = width
         self._height = height
         self.show_arrows = show_arrows
@@ -80,14 +76,48 @@ class Network:
 
         self._edge_id_i = 0
 
-    def node(self, node_id: str) -> Node:
-        n = Node(node_id)
+    def _generate_styles(self,
+                         node_label_font_family: str,
+                         node_label_font_size: str,
+                         node_label_color: str,
+                         link_label_font_family: str,
+                         link_label_font_size: str,
+                         link_label_color: str,
+                         background_color: str) -> None:
+        self._html = self._html.replace("<head></head>", f"""<head>
+    <style>
+        .node-label {{
+            font-family: "{node_label_font_family}";
+                font-size: {node_label_font_size};
+                fill: {node_label_color}
+            }}
+
+        .link-label {{
+            font-family: "{link_label_font_family}";
+            font-size: {link_label_font_size};
+            fill: {link_label_color};
+        }}
+
+        svg {{
+            background-color: {background_color};
+        }}
+    </style>
+</head>""")
+
+    def node(self, node_id: str, label: str | None = None) -> Node:
+        """
+        Create a new node and add it to the network.
+        :param label:
+        :param node_id:
+        :return:
+        """
+        n = Node(node_id, label)
         self._nodes.append(n)
         return n
 
     def edge(self, source_id: str, target_id: str) -> Edge:
         edge = Edge(source_id, target_id)
-        edge.id = self._edge_id_i
+        edge.edge_id = self._edge_id_i
         self._edge_id_i += 1
         self._edges.append(edge)
         return edge
@@ -96,7 +126,7 @@ class Network:
         r = self._html
 
         nodes = [{
-            "id": n.id,
+            "id": n.node_id,
             "label": n.label,
             "tooltip": n.tooltip,
             "color": n.color,
@@ -107,7 +137,7 @@ class Network:
         } for n in self._nodes]
 
         links = [{
-            "id": l.id,
+            "id": l.edge_id,
             "label": l.label,
             "source": l.source,
             "target": l.target,
@@ -130,8 +160,6 @@ class Network:
         b64data = base64.b64encode(data.encode("utf-8")).decode("utf-8")
         url = f"data:text/html;charset=utf-8;base64,{b64data}"
         return f"<iframe src=\"{url}\" width=\"{self._width}\" height=\"{self._height}\" scrolling=\"no\" style=\"border:none !important;\"></iframe>"
-
-
 
     def save(self, path: str) -> None:
         with open(path, "w") as writer:
