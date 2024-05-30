@@ -14,7 +14,7 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "docs" / "README.md").read_text()
 
 setup(
-    name="linkscape1",
+    name="link-scape",
     version=v,
     description="Python library to plot force-directed graphs.",
     long_description=README,
