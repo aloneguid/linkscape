@@ -23,7 +23,7 @@ class Node:
         self.stroke_width = stroke_width
 
 
-class Link:
+class Edge:
     def __init__(self, source: str, target: str,
                  label: str = None,
                  color: str = "#94B3CC",
@@ -40,7 +40,7 @@ class Link:
         self.force = force
 
 
-class ForceDirectedGraph:
+class Network:
 
     def __init__(self, width: int = 800, height: int = 600,
                  x_levels: int = -1,
@@ -55,7 +55,7 @@ class ForceDirectedGraph:
                  link_label_font_size: str = "8px",
                  link_label_color: str = "#aaa",
                  background_color: str = "white"):
-        self._html = resources.read_text("py3js", "force.html")
+        self._html = resources.read_text("linkscape", "template.html")
         self._html = (self._html
                       .replace("$width", str(width))
                       .replace("$height", str(height))
@@ -76,21 +76,23 @@ class ForceDirectedGraph:
         self.show_arrows = show_arrows
 
         self._nodes: List[Node] = []
-        self._links: List[Link] = []
+        self._edges: List[Edge] = []
 
-        self._link_id_i = 0
+        self._edge_id_i = 0
 
-    def add_nodes(self, *node: Node):
-        for n in node:
-            self._nodes.append(n)
+    def node(self, node_id: str) -> Node:
+        n = Node(node_id)
+        self._nodes.append(n)
+        return n
 
-    def add_links(self, *link: Link):
-        for lnk in link:
-            lnk.id = self._link_id_i
-            self._link_id_i += 1
-            self._links.append(lnk)
+    def edge(self, source_id: str, target_id: str) -> Edge:
+        edge = Edge(source_id, target_id)
+        edge.id = self._edge_id_i
+        self._edge_id_i += 1
+        self._edges.append(edge)
+        return edge
 
-    def _render_data(self):
+    def _render_data(self) -> str:
         r = self._html
 
         nodes = [{
@@ -113,7 +115,7 @@ class ForceDirectedGraph:
             "opacity": l.opacity,
             "width": l.width,
             "force": l.force
-        } for l in self._links]
+        } for l in self._edges]
 
         nodes_json = json.dumps(nodes)
         links_json = json.dumps(links)
@@ -131,6 +133,6 @@ class ForceDirectedGraph:
 
 
 
-    def save(self, path: str):
+    def save(self, path: str) -> None:
         with open(path, "w") as writer:
-            writer.write(self._repr_html_())
+            writer.write(self._render_data())
