@@ -23,6 +23,14 @@ class Node:
         self.stroke_color = stroke_color or "#23B3D7"
         self.stroke_width = stroke_width
 
+    def __hash__(self):
+        return hash(self.node_id)
+
+    def __eq__(self, other):
+        if isinstance(other, Node):
+            return self.node_id == other.node_id
+        return False
+
 
 class Edge:
     def __init__(self, source: str, target: str,
@@ -39,6 +47,14 @@ class Edge:
         self.opacity = opacity
         self.width = width
         self.force = force
+
+    def __hash__(self):
+        return hash(self.source + self.target)
+
+    def __eq__(self, other):
+        if isinstance(other, Edge):
+            return self.source == other.source and self.target == other.target
+        return False
 
 
 class Network:
@@ -72,8 +88,8 @@ class Network:
         self._height = height
         self.show_arrows = show_arrows
 
-        self._nodes: List[Node] = []
-        self._edges: List[Edge] = []
+        self._nodes: set[Node] = set()
+        self._edges: set[Edge] = set()
 
         self._edge_id_i = 0
 
@@ -108,20 +124,38 @@ class Network:
     def node(self, node_id: str, label: str | None = None) -> Node:
         """
         Create a new node and add it to the network.
-        :param label:
-        :param node_id:
-        :return:
+        :param node_id: Node id.
+        :param label: Node label.
+        :return: The created node.
         """
+
         n = Node(node_id, label)
-        self._nodes.append(n)
+        if n in self._nodes:
+            raise ValueError(f"Node with id '{node_id}' already exists.")
+
+        self._nodes.add(n)
         return n
+
+    def has_node(self, node_id: str) -> bool:
+        """
+        Check if a node with the given id exists in the network.
+        :param node_id: Node id to check.
+        :return: True if the node exists, False otherwise.
+        """
+
+        return any(n.node_id == node_id for n in self._nodes)
 
     def edge(self, source_id: str, target_id: str) -> Edge:
         edge = Edge(source_id, target_id)
+        if edge in self._edges:
+            raise ValueError(f"Edge between '{source_id}' and '{target_id}' already exists.")
         edge.edge_id = self._edge_id_i
         self._edge_id_i += 1
-        self._edges.append(edge)
+        self._edges.add(edge)
         return edge
+
+    def has_edge(self, source_id: str, target_id: str) -> bool:
+        return any(e.source == source_id and e.target == target_id for e in self._edges)
 
     def _render_data(self) -> str:
         r = self._html
