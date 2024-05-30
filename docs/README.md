@@ -23,5 +23,5 @@ Python network visualisation library I have created for visualising data when pe
   - Label.
   - Custom force.
 
-You can browse documentation and examples in [this Jupyter notebook](https://nbviewer.jupyter.org/github/aloneguid/linkscape/tree/main/examples/).
+You can browse documentation and examples in [this Jupyter notebook](https://nbviewer.jupyter.org/github/aloneguid/linkscape/tree/master/examples/).
 
