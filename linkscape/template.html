@@ -71,15 +71,6 @@
             g.attr("transform", e.transform)
         }
 
-        // const link = svg.append("g")
-        //     .selectAll("line")
-        //     .data(data_links)
-        //     .enter().append("line")
-        //     .attr("stroke", d => d.color)
-        //     .attr("stroke-opacity", d => d.opacity)
-        //     .attr("marker-end", d => d.arrow ? `url(#end-${d.id})` : "")
-        //     .attr("stroke-width", d => d.width);
-
         const link = g.append("g")
             .attr("fill", "none")
             .selectAll("path")
@@ -169,15 +160,9 @@
             .links(data_links);
 
         function ticked() {
-            link
-                // .attr("x1", function(d) { return d.source.x; })
-                // .attr("y1", function(d) { return d.source.y; })
-                // .attr("x2", function(d) { return d.target.x; })
-                // .attr("y2", function(d) { return d.target.y; })
-                .attr("d", linkNodes);
+            link.attr("d", linkNodes);
 
-            node
-                .attr("transform", function(d) {
+            node.attr("transform", function(d) {
                     return "translate(" + d.x + "," + d.y + ")";
                 })
 

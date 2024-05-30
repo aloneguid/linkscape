@@ -9,17 +9,18 @@ class Node:
                  node_id: str,
                  label: str = None,
                  tooltip: str = None,
-                 color: str = "#57C7E3", level: int = None,
+                 color: str = None,
+                 level: int = None,
                  radius: int = 18,
-                 stroke_color: str = "#23B3D7",
+                 stroke_color: str = None,
                  stroke_width: int = 2):
         self.node_id = node_id
         self.label = label
         self.tooltip = tooltip or label
-        self.color = color
+        self.color = color or "#57C7E3"
         self.level = level
         self.radius = radius
-        self.stroke_color = stroke_color
+        self.stroke_color = stroke_color or "#23B3D7"
         self.stroke_width = stroke_width
 
 
