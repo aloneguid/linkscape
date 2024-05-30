@@ -1,0 +1,2 @@
+include linkscape/*.html
+exclude linkscape/_*.html

@@ -1,0 +1,30 @@
+name: Upload Python Package
+
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+
+env:
+  v: '0.0.1'
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel twine
+    - name: Build and publish
+      run: |
+        python setup.py sdist bdist_wheel
+        twine upload --verbose --non-interactive --username __token__ --password ${{ secrets.PYPI_TOKEN }} dist/*

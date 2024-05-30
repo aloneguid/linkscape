@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>D3 Force-Directed Graph</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        .node-label {
+            font-family: "$nodeFontFamily";
+            font-size: $nodeFontSize;
+            fill: $nodeFontColor;
+        }
+
+        .link-label {
+            font-family: "$linkFontFamily";
+            font-size: $linkFontSize;
+            fill: $linkFontColor;
+        }
+
+        svg {
+            background-color: $backgroundColor;
+        }
+    </style>
+</head>
+<body>
+<!--    <svg width="$width" height="$height"></svg>-->
+
+    <script>
+
+        const data_nodes = $data_nodes;
+        const data_links = $data_links;
+        const x_levels = $x_levels;
+        const collision_radius = $collision_radius;
+        const linkType = "$linkType"
+        const showArrows = $showArrows;
+        const linkForce = $linkForce;
+
+        const svg = d3.select("body").append("svg");
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        svg.attr("width", width);
+        svg.attr("height", height);
+
+        // encompassing group for the zoom
+        const g = svg.append("g")
+            .attr("class", "everything");
+
+        // build the arrow.
+        // there is no way to inherit styles, and edges can be different ones, therefore create def per edge
+        if(showArrows) {
+            svg.append("svg:defs").selectAll("marker")
+                .data(data_links)      // Different link/path types can be defined here
+                .enter().append("svg:marker")    // This section adds in the arrows
+                .attr("id", d => `end-${d.id}`)
+                .attr("viewBox", "0 0 10 10")
+                .attr("refX", 10) // distance from the end to beginning
+                .attr("refY", 5)
+                .attr("markerWidth", 10)
+                .attr("markerHeight", 10)
+                .attr("orient", "auto")
+                .append("svg:path")
+                .attr("fill", d => d.color)
+                .attr("d", "M 0 0, L 0 10, L 10 5, L 0 0");
+        }
+
+        let simulation = d3.forceSimulation()
+            .force("charge", d3.forceManyBody())
+            .force('collision', d3.forceCollide().radius(d => collision_radius + d.radius).iterations(1))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("link", d3.forceLink().id(d => d.id).strength(d => d.force || linkForce));
+
+        if(x_levels > 0) {
+            simulation = simulation
+                .force("x", d3.forceX(d => {
+                    if(d.level === 1) {
+                        return width/x_levels;
+                    }
+                    return width/x_levels * d.level;
+                }).strength(0.95))
+                // push a little bit to the center as they may disappear
+                .force("y", d3.forceY(height/2).strength(0.1))
+
+        }
+
+        //add zoom capabilities
+        const zoom_handler = d3.zoom()
+            .on("zoom", zoom_actions);
+
+        zoom_handler(svg);
+
+        //Zoom functions
+        function zoom_actions(e){
+            g.attr("transform", e.transform)
+        }
+
+        // const link = svg.append("g")
+        //     .selectAll("line")
+        //     .data(data_links)
+        //     .enter().append("line")
+        //     .attr("stroke", d => d.color)
+        //     .attr("stroke-opacity", d => d.opacity)
+        //     .attr("marker-end", d => d.arrow ? `url(#end-${d.id})` : "")
+        //     .attr("stroke-width", d => d.width);
+
+        const link = g.append("g")
+            .attr("fill", "none")
+            .selectAll("path")
+            .data(data_links)
+            .join("path")
+            .attr("stroke", d => d.color)
+            .attr("stroke-width", d => d.width)
+            .attr("stroke-opacity", d => d.opacity);
+
+        if(showArrows) {
+            link.attr("marker-end", d => `url(#end-${d.id})`);
+        }
+
+        const node = g.append("g")
+            .selectAll("g")
+            .data(data_nodes)
+            .enter().append("g")
+            .call(d3.drag()
+                .on("start", dragStarted)
+                .on("drag", dragMoving)
+                .on("end", dragEnded));
+
+        const linkPath = g.selectAll(".linkpath")
+            .data(data_links.filter(l => l.label))
+            .enter()
+            .append('path')
+            .attr("class", "linkpath")
+            .attr("fill-opacity", 0)
+            .attr("stroke-opacity", 0)
+            .attr("id", d => `lbp${d.id}`)
+            .style("pointer-events", "none");
+
+        const linkLabel = g.selectAll(".linklabel")
+            .data(data_links.filter(l => l.label))  // build only for edges that have labels
+            .enter()
+            .append('text')
+            .style("pointer-events", "none")
+            .attr("class", "linklabel")
+            .attr("id", d => 'lbll' + d.id)
+            .attr("class", "link-label");
+
+        linkLabel.append('textPath')
+            .attr('xlink:href', d => `#lbp${d.id}`)
+            .style("text-anchor", "middle")
+            .style("pointer-events", "none")
+            .attr("startOffset", "50%")
+            .text(d => d.label);
+
+        function dragStarted(event) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+        }
+
+        function dragMoving(event) {
+            event.subject.fx = event.x;
+            event.subject.fy = event.y;
+        }
+
+        function dragEnded(event) {
+            if (!event.active) simulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+        }
+
+        // make a round circle!
+        const circles = node.append("circle")
+            .attr("r", d => d.radius)
+            .attr("fill", d => d.color)
+            .attr("stroke", d => d.stroke)
+            .attr("stroke-width", d => d.stroke_width);
+
+        const labels = node.append("text")
+            .text(d => d.label)
+            .attr("class", "node-label")
+            .attr('x', d => d.radius + d.stroke_width)
+            .attr('y', 0);
+
+        node.append("title")
+            .text(function(d) { return d.tooltip; });
+
+        simulation
+            .nodes(data_nodes)
+            .on("tick", ticked);
+
+        simulation.force("link")
+            .links(data_links);
+
+        function ticked() {
+            link
+                // .attr("x1", function(d) { return d.source.x; })
+                // .attr("y1", function(d) { return d.source.y; })
+                // .attr("x2", function(d) { return d.target.x; })
+                // .attr("y2", function(d) { return d.target.y; })
+                .attr("d", linkNodes);
+
+            node
+                .attr("transform", function(d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+                })
+
+            linkPath.attr('d', d => `M ${d.source.x} ${d.source.y} L ${d.target.x} ${d.target.y}`);
+
+            linkLabel.attr('transform', function (d) {
+                if (d.target.x < d.source.x) {
+                    const bbox = this.getBBox();
+
+                    let rx = bbox.x + bbox.width / 2;
+                    let ry = bbox.y + bbox.height / 2;
+                    return 'rotate(180 ' + rx + ' ' + ry + ')';
+                }
+                else {
+                    return 'rotate(0)';
+                }
+            });
+        }
+
+        function linkNodes(d) {
+            let sourceX = d.source.x;
+            let sourceY = d.source.y;
+            let targetX = d.target.x;
+            let targetY = d.target.y;
+
+            const theta = Math.atan((targetX - sourceX) / (targetY - sourceY));
+            const phi = Math.atan((targetY - sourceY) / (targetX - sourceX));
+
+            const sr = d.source.radius;
+            const tr = d.target.radius;
+            const sinTheta = sr * Math.sin(theta);
+            const cosTheta = sr * Math.cos(theta);
+            const sinPhi = tr * Math.sin(phi);
+            const cosPhi = tr * Math.cos(phi);
+
+            // Set the position of the link's end point at the source node
+            // such that it is on the edge closest to the target node
+            if (d.target.y > d.source.y) {
+                sourceX = sourceX + sinTheta;
+                sourceY = sourceY + cosTheta;
+            }
+            else {
+                sourceX = sourceX - sinTheta;
+                sourceY = sourceY - cosTheta;
+            }
+
+            // Set the position of the link's end point at the target node
+            // such that it is on the edge closest to the source node
+            if (d.source.x > d.target.x) {
+                targetX = targetX + cosPhi;
+                targetY = targetY + sinPhi;
+            }
+            else {
+                targetX = targetX - cosPhi;
+                targetY = targetY - sinPhi;
+            }
+
+            // Draw an arc between the two calculated points
+            const dx = targetX - sourceX,
+                dy = targetY - sourceY,
+                dr = Math.sqrt(dx * dx + dy * dy);
+
+            if(linkType === "arc") {
+                return "M" + sourceX + "," + sourceY + "A" + dr + "," + dr + " 0 0,1 " + targetX + "," + targetY;
+            } else {
+                return `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
+            }
+
+        }
+
+
+    </script>
+</body>
+</html>
